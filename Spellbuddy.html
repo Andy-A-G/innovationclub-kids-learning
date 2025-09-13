@@ -54,7 +54,7 @@
         </div>
 
         <div style="margin-top:12px">
-          <label>Enter words (one per line or comma‑separated)
+          <label>Enter words (one per line or comma-separated)
             <textarea id="words" placeholder="example
 bridge
 science
@@ -145,6 +145,21 @@ whole"></textarea>
       </div>
     </div>
 
+    <!-- ADDED: Browser notice modal -->
+    <div id="browserNotice" class="modal-overlay" style="display:none">
+      <div class="modal-card">
+        <h3>Better voices are available in Chrome</h3>
+        <p style="opacity:.8;margin:8px 0 14px">
+          For the clearest, most natural voice (Google UK English Female), please open this app in <b>Google Chrome</b>. Other browsers may sound robotic.
+        </p>
+        <div class="row" style="justify-content:center;gap:10px">
+          <a href="https://www.google.com/chrome/" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none;display:inline-block">Get Chrome</a>
+          <button id="continueBtn" class="btn">Continue anyway</button>
+        </div>
+      </div>
+    </div>
+    <!-- /ADDED -->
+
     <footer>Works best in Chrome with speech enabled.</footer>
   </div>
   <div id="toast" class="toast">Saved</div>
@@ -168,6 +183,11 @@ const retryBtn=$('#retry'), newWeekBtn=$('#newWeek');
 const nextModal=$('#nextModal'), nextBtn=$('#nextBtn');
 const contextBtn=$('#context');
 const toastEl=$('#toast');
+
+// ADDED: references to the popup elements
+const browserNotice = document.querySelector('#browserNotice');
+const continueBtn = document.querySelector('#continueBtn');
+// /ADDED
 
 // ===== State
 let words=[], order=[], idx=0, records=[];
@@ -204,6 +224,28 @@ function speakQueue(items){
   next();
 }
 
+// ADDED: popup logic (Chrome/voice check)
+function looksLikeChrome(){
+  const ua = navigator.userAgent;
+  const isChrome = /Chrome\//.test(ua);
+  const isEdge = /Edg\//.test(ua);
+  const isOpera = /OPR\//.test(ua);
+  return isChrome && !isEdge && !isOpera;
+}
+function hasGoogleUKVoice(){
+  try{ return speechSynthesis.getVoices().some(v=>/Google UK English Female/i.test(v.name)); }
+  catch{ return false; }
+}
+function checkVoiceQuality(){
+  if(!browserNotice) return;
+  const shouldWarn = !looksLikeChrome() || !hasGoogleUKVoice();
+  if(shouldWarn){ browserNotice.style.display='grid'; }
+}
+continueBtn?.addEventListener('click', ()=>{ browserNotice.style.display='none'; });
+speechSynthesis.onvoiceschanged = () => { checkVoiceQuality(); };
+setTimeout(checkVoiceQuality, 600); // fallback for Safari where voiceschanged may not fire
+// /ADDED
+
 // ===== Sounds
 const APPLAUSE_FILE='applause.mp3';
 let applauseAudio=null, applauseReady=false;
@@ -221,9 +263,9 @@ function shocked(){ const c=ctx(); const o=c.createOscillator(), g=c.createGain(
 // ===== Confetti
 function confettiBurst(){ const host=document.querySelector('#confetti'); host.innerHTML=''; for(let i=0;i<28;i++){ const s=document.createElement('span'); s.textContent=['🎉','✨','🎈','⭐','🎊'][Math.floor(Math.random()*5)]; s.style.left=(Math.random()*100)+'%'; s.style.top='-2rem'; s.style.animationDuration=(2+Math.random()*1.5)+'s'; s.style.animationDelay=(Math.random()*0.5)+'s'; host.appendChild(s);} }
 
-// ===== Jokes (kid‑safe: icanhazdadjoke -> JokeAPI strict -> offline)
+// ===== Jokes (kid-safe: icanhazdadjoke -> JokeAPI strict -> offline)
 async function randomJoke(){
-  try{ // primary: SFW one‑liners
+  try{ // primary: SFW one-liners
     const res=await fetch('https://icanhazdadjoke.com/',{headers:{'Accept':'application/json'}});
     if(res.ok){ const data=await res.json(); if(data && data.joke){ return {q:data.joke, a:''}; } }
   }catch{}
@@ -251,7 +293,7 @@ async function speakContext(){ const w=words[order[idx]]; const s=await sentence
 function progress(){ progressEl.textContent=(idx+1)+'/'+order.length; }
 async function submitAnswer(){ const w=words[order[idx]]; const ok=(answerEl.value||'').trim().toLowerCase()===w.toLowerCase(); const r=records[order[idx]]; r.attempts++; if(ok){ r.correct=true; await goodFeedback(); applause(); confettiBurst(); showNextModal(); } else { badFeedback(); shocked(); answerEl.focus(); } }
 async function goodFeedback(){ const j=await randomJoke(); feedbackEl.innerHTML='<div class="feedback ok"><div style="font-weight:700">🎉 Correct!</div><div style="margin-top:6px">'+(j.q||'Great job!')+'</div><div style="font-style:italic;opacity:.8">'+(j.a||'')+'</div></div>'; const lines=[{text:'Well done! That was brilliant.',rate:1}]; if(j.q){ lines.push({text:j.q+(j.a?(' '+j.a):''),rate:1}); } speakQueue(lines); }
-function badFeedback(){ const t=randomChoice(['Oooh, close! Give it another whirl.','Nearly! Your keyboard sneezed, try again.','So close I can smell victory. One more go!','Almost! Your letters are doing the hokey‑cokey.','Missed by a whisker. You’ve got this.','Your fingers did a little tango—try once more!']); feedbackEl.innerHTML='<div class="feedback no"><div style="font-weight:700">😲 Not quite…</div><div style="margin-top:6px">'+t+'</div><div style="opacity:.75">Try again, or tap Hint.</div></div>'; speakQueue([{text:randomChoice(['Almost! Try again.','Close! Give it another go.']),rate:1}]); }
+function badFeedback(){ const t=randomChoice(['Oooh, close! Give it another whirl.','Nearly! Your keyboard sneezed, try again.','So close I can smell victory. One more go!','Almost! Your letters are doing the hokey-cokey.','Missed by a whisker. You’ve got this.','Your fingers did a little tango—try once more!']); feedbackEl.innerHTML='<div class="feedback no"><div style="font-weight:700">😲 Not quite…</div><div style="margin-top:6px">'+t+'</div><div style="opacity:.75">Try again, or tap Hint.</div></div>'; speakQueue([{text:randomChoice(['Almost! Try again.','Close! Give it another go.']),rate:1}]); }
 function giveHint(){ const w=words[order[idx]]; feedbackEl.innerHTML='<div class="feedback no">Hint: it starts with “<b>'+w[0]+'</b>…”</div>'; }
 function nextWord(){ hideNextModal(); feedbackEl.innerHTML=''; answerEl.value=''; if(idx+1>=order.length){ showSummary(); return; } idx++; progress(); setTimeout(sayCurrent,250); }
 function showSummary(){ quiz.style.display='none'; summary.style.display='block'; sumWeekEl.textContent=weekEl.value||suggestedWeek(); const correct=records.filter(r=>r.correct).length; scoreEl.textContent='Score: '+correct+'/'+records.length; rowsEl.innerHTML=records.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><b>'+r.word+'</b></td><td>'+r.attempts+'</td><td>'+(r.correct?'✅':'❌')+'</td></tr>').join(''); speakQueue([{text:'Great work. Here is your summary.',rate:1}]); }
