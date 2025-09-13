@@ -235,14 +235,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return (Date.now() - st.dismissedAt) < 7*24*60*60*1000; // 7 days
   }
   function checkVoiceQuality(){
-    if(!browserNotice) return;
-    if (noticeRecentlyDismissed()) return;
-    if (isIOS()) return; // don't nag iOS/iPadOS
-
-    if (!looksLikeChrome()) {
-      browserNotice.style.display = 'grid';
-      return;
-    }
+  if(!browserNotice) return;
+  if (isIOS()) return;                         // don’t nag iOS/iPadOS
+  if (noticeRecentlyDismissed()) return;       // respect “Continue anyway”
+  if (looksLikeChrome()) return;               // <-- never warn in Chrome
+  browserNotice.style.display = 'grid';        // warn only for non-Chrome
+}
 
     // In Chrome, wait up to ~6s for voices to appear
     let tries = 0;
