@@ -150,6 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ADDED: references to popup elements
   const browserNotice = document.querySelector('#browserNotice');
   const continueBtn = document.querySelector('#continueBtn');
+  // Remember popup dismissal for a week
+  const VOICE_NOTICE_KEY = 'ttb.voiceNotice.v1';
   // /ADDED
 
   let pool=[], order=[], idx=0, records=[];
@@ -203,30 +205,64 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   speechSynthesis.onvoiceschanged=()=>{}; // warm voices on Chrome
 
-  // ADDED: popup logic (Chrome/voice check)
+  // ADDED: popup logic (Chrome/voice check) — smarter, patient, and remembers dismissal
   function looksLikeChrome(){
     const ua = navigator.userAgent;
-    const isChrome = /Chrome\//.test(ua);
+    const isChrome = /Chrome\//.test(ua) && /Google Inc/.test(navigator.vendor || '');
     const isEdge = /Edg\//.test(ua);
     const isOpera = /OPR\//.test(ua);
     return isChrome && !isEdge && !isOpera;
   }
-  function hasGoogleUKVoice(){
-    try{ return speechSynthesis.getVoices().some(v=>/Google UK English Female/i.test(v.name)); }
-    catch{ return false; }
+  function isIOS(){
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+  function hasGoodUKVoice(){
+    try{
+      const good = v => /Google UK English Female/i.test(v.name) || /en-GB/i.test(v.lang || '');
+      return speechSynthesis.getVoices().some(good);
+    }catch{ return false; }
+  }
+  function getNoticeState(){
+    try{ return JSON.parse(localStorage.getItem(VOICE_NOTICE_KEY) || 'null'); }catch{ return null; }
+  }
+  function setNoticeState(obj){
+    try{ localStorage.setItem(VOICE_NOTICE_KEY, JSON.stringify(obj)); }catch{}
+  }
+  function noticeRecentlyDismissed(){
+    const st = getNoticeState();
+    if(!st || !st.dismissedAt) return false;
+    return (Date.now() - st.dismissedAt) < 7*24*60*60*1000; // 7 days
   }
   function checkVoiceQuality(){
     if(!browserNotice) return;
-    const shouldWarn = !looksLikeChrome() || !hasGoogleUKVoice();
-    if(shouldWarn){ browserNotice.style.display='grid'; }
+    if (noticeRecentlyDismissed()) return;
+    if (isIOS()) return; // don't nag iOS/iPadOS
+
+    if (!looksLikeChrome()) {
+      browserNotice.style.display = 'grid';
+      return;
+    }
+
+    // In Chrome, wait up to ~6s for voices to appear
+    let tries = 0;
+    const maxTries = 20;
+    const iv = setInterval(() => {
+      const ok = hasGoodUKVoice();
+      if (ok || tries >= maxTries){
+        clearInterval(iv);
+        if (!ok) browserNotice.style.display = 'grid';
+      }
+      tries++;
+    }, 300);
   }
-  continueBtn?.addEventListener('click', ()=>{ browserNotice.style.display='none'; });
-  // ensure our check runs after voices load
+  continueBtn?.addEventListener('click', () => {
+    browserNotice.style.display = 'none';
+    setNoticeState({ dismissedAt: Date.now() });
+  });
+  // ensure our check runs after voices load + with a fallback; no spammy loops
   speechSynthesis.onvoiceschanged = () => { checkVoiceQuality(); };
-  // fallback for Safari where voiceschanged may not fire
   setTimeout(checkVoiceQuality, 600);
-  // run immediately too (covers Safari cases that miss the timeout)
-  checkVoiceQuality();
   // /ADDED
 
   // --- Sounds (applause + shocked) ---
