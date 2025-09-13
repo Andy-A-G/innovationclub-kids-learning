@@ -25,7 +25,7 @@
   .confetti span{position:absolute;font-size:22px;animation:fall linear forwards}
   @keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:.9}}
   .question{font-size:clamp(24px,6vw,48px);font-weight:900;letter-spacing:-.02em;text-align:center;margin:6px 0 10px}
-  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;place-items:center;z-index:50}
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;place-items:center;z-index:9999}
   .modal-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 10px 35px rgba(0,0,0,.12);padding:20px;max-width:420px;width:90%;text-align:center}
   .modal-card h3{margin:.2rem 0 .6rem;font-size:1.2rem}
   #timer{height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin:6px 0 10px}
@@ -225,10 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function checkVoiceQuality(){
     if(!browserNotice) return;
-    if (isIOS()) return;                   // don’t nag iOS/iPadOS
-    if (noticeRecentlyDismissed()) return; // respect previous dismissal
-    if (looksLikeChrome()) return;         // never warn in real Chrome desktop
-    browserNotice.style.display='grid';    // warn only for non-Chrome
+    if (isIOS()) return;
+    if (noticeRecentlyDismissed()) return;
+    if (looksLikeChrome()) return;
+    browserNotice.style.display='grid';
   }
   continueBtn?.addEventListener('click', () => {
     browserNotice.style.display = 'none';
@@ -237,19 +237,97 @@ document.addEventListener('DOMContentLoaded', () => {
   speechSynthesis.onvoiceschanged = () => { checkVoiceQuality(); };
   setTimeout(checkVoiceQuality, 600);
 
+  // ===== Jokes with fast timeouts (never block UI) =====
+  async function fetchJSON(url, ms){
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort(), ms);
+    try{
+      const r = await fetch(url,{headers:{'Accept':'application/json'}, signal:ctrl.signal});
+      clearTimeout(t);
+      if(!r.ok) return null;
+      return await r.json();
+    }catch{ clearTimeout(t); return null; }
+  }
+  async function randomJokeFast(){
+    // try 1: dad joke (1.2s)
+    const d = await fetchJSON('https://icanhazdadjoke.com/', 1200);
+    if(d?.joke) return {q:d.joke,a:''};
+    // try 2: JokeAPI (1.2s)
+    const j = await fetchJSON('https://v2.jokeapi.dev/joke/Misc,Pun?type=twopart&blacklistFlags=nsfw,religious,political,racist,sexist,explicit', 1200);
+    if(j?.setup && j?.delivery) return {q:j.setup,a:j.delivery};
+    if(j?.joke) return {q:j.joke,a:''};
+    // fallback
+    return {q:'Nice work!', a:''};
+  }
+
+  // ===== Sounds / confetti =====
+  let audioCtx=null; const ctx=()=>audioCtx||(audioCtx=new (window.AudioContext||window.webkitAudioContext)());
+  function applause(){ const c=ctx(); const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=2400; const g=c.createGain(); g.gain.value=0.18; f.connect(g).connect(c.destination); const bursts=6,dur=0.12,gap=0.12,now=c.currentTime; for(let i=0;i<bursts;i++){ const start=now+i*(dur+gap); const frames=Math.floor(c.sampleRate*dur); const buf=c.createBuffer(1,frames,c.sampleRate); const data=buf.getChannelData(0); for(let j=0;j<frames;j++){ const env=Math.exp(-j/(frames*0.5)); data[j]=(Math.random()*2-1)*env; } const src=c.createBufferSource(); src.buffer=buf; src.connect(f); src.start(start);} }
+  function shocked(){ const c=ctx(); const o=c.createOscillator(), g=c.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(900,c.currentTime); o.frequency.exponentialRampToValueAtTime(220,c.currentTime+0.35); g.gain.setValueAtTime(0.12,c.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.35); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+0.38); }
+  function confettiBurst(){ confettiHost.innerHTML=''; for(let i=0;i<28;i++){ const s=document.createElement('span'); s.textContent=['🎉','✨','🎈','⭐','🎊'][Math.floor(Math.random()*5)]; s.style.left=(Math.random()*100)+'%'; s.style.top='-2rem'; s.style.animationDuration=(2+Math.random()*1.5)+'s'; s.style.animationDelay=(Math.random()*0.5)+'s'; confettiHost.appendChild(s);} }
+
   // ===== App logic =====
   function start(){ pool=buildPool(); if(pool.length===0){ alert('Pick at least one table.'); return; } const n=Math.min(TEST_LEN,pool.length); order=sampleUnique(n,pool.length); records=[]; idx=0; setup.style.display='none'; summary.style.display='none'; quiz.style.display='block'; nextQuestion(); }
-  function nextQuestion(){ const q=pool[order[idx]]; if(!q) return; document.title=`${q.a} × ${q.b} = ? — Times Buddy`; questionEl.textContent=`${q.a} × ${q.b} = ?`; progressEl.textContent=`${idx+1}/${order.length}`; answerEl.value=''; answerEl.focus(); resetTimer(); startTimer(); speakQueue([{text:`What is ${q.a} times ${q.b}?`, rate:0.98}]); }
-  function submit(){ const q=pool[order[idx]]; if(!q) return; const guess=parseInt((answerEl.value||'').trim(),10); if(!Number.isFinite(guess)){ speakQueue([{text:'Please enter a number.'}]); return; } let rec=records[idx]||(records[idx]={...q, attempts:0, correct:false, inTime:false}); rec.attempts++; rec.inTime = (performance.now()-timerStart)<=TIMER_MS; if(guess===q.ans){ rec.correct=true; onCorrect(); } else { onWrong(); } }
-  async function onCorrect(){ stopTimer(); feedbackEl.innerHTML = `<div class="feedback ok"><div style="font-weight:700">🎉 Correct!</div></div>`; const j=await randomJoke(); speakQueue([{ text: 'Well done! That was brilliant.' },{ text: (j.q||'') + (j.a?(' '+j.a):'') }]); applause(); confettiBurst(); showNextModal(); }
-  function onWrong(){ feedbackEl.innerHTML = `<div class="feedback no"><div style="font-weight:700">😲 Not quite…</div><div style="opacity:.75">Try again. Hint can help.</div></div>`; speakQueue([{text:'Almost! Try again.'}]); shocked(); answerEl.focus(); }
+
+  function nextQuestion(){
+    const q=pool[order[idx]]; if(!q) return;
+    document.title=`${q.a} × ${q.b} = ? — Times Buddy`;
+    questionEl.textContent=`${q.a} × ${q.b} = ?`;
+    progressEl.textContent=`${idx+1}/${order.length}`;
+    answerEl.value=''; answerEl.focus();
+    resetTimer(); startTimer();
+    speakQueue([{text:`What is ${q.a} times ${q.b}?`, rate:0.98}]);
+  }
+
+  function submit(){
+    const q=pool[order[idx]]; if(!q) return;
+    const guess=parseInt((answerEl.value||'').trim(),10);
+    if(!Number.isFinite(guess)){ speakQueue([{text:'Please enter a number.'}]); return; }
+    let rec=records[idx]||(records[idx]={...q, attempts:0, correct:false, inTime:false});
+    rec.attempts++;
+    rec.inTime = (performance.now()-timerStart)<=TIMER_MS;
+    if(guess===q.ans){ rec.correct=true; onCorrect(); } else { onWrong(); }
+  }
+
+  async function onCorrect(){
+    stopTimer();
+    feedbackEl.innerHTML = `<div class="feedback ok"><div style="font-weight:700">🎉 Correct!</div></div>`;
+    applause(); confettiBurst();
+
+    // Show the modal immediately – never block on network
+    showNextModal();
+
+    // Say a quick praise right away
+    speakQueue([{ text: 'Well done! That was brilliant.' }]);
+
+    // Fetch joke in the background with short timeouts; speak when (and if) it arrives
+    randomJokeFast().then(j=>{
+      if(!j) return;
+      const line = (j.q||'') + (j.a?(' '+j.a):'');
+      if(line.trim()) speakQueue([{text: line}]);
+    });
+  }
+
+  function onWrong(){
+    feedbackEl.innerHTML = `<div class="feedback no"><div style="font-weight:700">😲 Not quite…</div><div style="opacity:.75">Try again. Hint can help.</div></div>`;
+    speakQueue([{text:'Almost! Try again.'}]);
+    shocked();
+    answerEl.focus();
+  }
+
   function hint(){ const q=pool[order[idx]]; if(!q) return; const a=q.a, b=q.b; const msg=`Think ${a}×${b-1} plus ${a}.`; feedbackEl.innerHTML=`<div class="feedback no">Hint: ${msg}</div>`; speakQueue([{text:msg,rate:0.98}]); }
   function sayQ(){ const q=pool[order[idx]]; if(!q) return; speakQueue([{text:`What is ${q.a} times ${q.b}?`,rate:0.98}]); }
   function skip(){ const q=pool[order[idx]]; if(!q) return; let rec=records[idx]||(records[idx]={...q, attempts:0, correct:false, inTime:false}); rec.skipped=true; stopTimer(); advance(); }
+
   function advance(){ hideNextModal(); stopTimer(); if(idx+1>=order.length){ showSummary(); } else { idx++; nextQuestion(); } }
   function showNextModal(){ nextModal.style.display='grid'; setTimeout(()=>nextBtn.focus(),50); }
   function hideNextModal(){ nextModal.style.display='none'; }
-  function showSummary(){ quiz.style.display='none'; summary.style.display='block'; const correct=records.filter(r=>r.correct).length; scoreEl.textContent=`Score: ${correct}/${order.length}`; rowsEl.innerHTML =
+
+  function showSummary(){
+    quiz.style.display='none'; summary.style.display='block';
+    const correct=records.filter(r=>r.correct).length;
+    scoreEl.textContent=`Score: ${correct}/${order.length}`;
+    rowsEl.innerHTML =
       `<div class="row" style="font-weight:700;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin:6px 0">
         <div style="flex:1"># / Question</div>
         <div style="width:110px;text-align:center">Correct</div>
@@ -259,7 +337,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="flex:1"><b>${i+1}.</b> ${r.a} × ${r.b} = ${r.ans}</div>
           <div style="width:110px;text-align:center">${r.correct?'✅':'❌'} <small style="opacity:.7">(${r.attempts} tries)</small></div>
           <div style="width:150px;text-align:center">${r.skipped?'⏭️ Skipped':(r.inTime?'⏱️ In time':'⌛ Overtime')}</div>
-        </div>`).join(''); speakQueue([{text:'Great work. Here is your summary.'}]); }
+        </div>`).join('');
+    speakQueue([{text:'Great work. Here is your summary.'}]);
+  }
+
   function cancel(){ hideNextModal(); summary.style.display='none'; quiz.style.display='none'; setup.style.display='block'; feedbackEl.innerHTML=''; records=[]; order=[]; idx=0; document.title='Times Buddy — Year 4'; }
   function retry(){ records=[]; order=sampleUnique(order.length, pool.length); idx=0; summary.style.display='none'; quiz.style.display='block'; nextQuestion(); }
   function newSet(){ summary.style.display='none'; setup.style.display='block'; }
@@ -268,6 +349,12 @@ document.addEventListener('DOMContentLoaded', () => {
   startBtn?.addEventListener('click', start);
   answerForm?.addEventListener('submit', e=>{ e.preventDefault(); submit(); });
   nextBtn?.addEventListener('click', advance);
+  // Quality-of-life: Enter key advances when modal open; clicking the overlay advances too
+  document.addEventListener('keydown', e => {
+    if(nextModal.style.display === 'grid' && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); advance(); }
+  });
+  nextModal.addEventListener('click', (e)=>{ if(e.target === nextModal) advance(); });
+
   cancelBtn?.addEventListener('click', cancel);
   const retryBtn = document.querySelector('#retry');
   const newSetBtn = document.querySelector('#newSet');
