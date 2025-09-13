@@ -277,8 +277,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ===== Sounds / confetti =====
   let audioCtx=null; const ctx=()=>audioCtx||(audioCtx=new (window.AudioContext||window.webkitAudioContext)());
-  function applause(){ const c=ctx(); const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=2400; const g=c.createGain(); g.gain.value=0.18; f.connect(g).connect(c.destination); const bursts=6,dur=0.12,gap=0.12,now=c.currentTime; for(let i=0;i<bursts;i++){ const start=now+i*(dur+gap); const frames=Math.floor(c.sampleRate*dur); const buf=c.createBuffer(1,frames,c.sampleRate); const data=buf.getChannelData(0); for(let j=0;j<frames;j++){ const env=Math.exp(-j/(frames*0.5)); data[j]=(Math.random()*2-1)*env; } const src=c.createBufferSource(); src.buffer=buf; src.connect(f); src.start(start);} }
-  function shocked(){ const c=ctx(); const o=c.createOscillator(), g=c.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(900,c.currentTime); o.frequency.exponentialRampToValueAtTime(220,c.currentTime+0.35); g.gain.setValueAtTime(0.12,c.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.35); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+0.38); }
+  let audioUnlocked = false;
+function ensureAudio(){
+  try{
+    const c = ctx();
+    if (c.state === 'suspended') c.resume();
+    audioUnlocked = true;
+  }catch{}
+}
+function applause(){
+  ensureAudio();
+  const c = ctx();
+  const filter = c.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 2400;
+
+  const master = c.createGain();
+  master.gain.value = 0.28; // was 0.18 — a bit louder
+
+  filter.connect(master).connect(c.destination);
+
+  const bursts = 6, dur = 0.12, gap = 0.12, now = c.currentTime;
+  for (let i = 0; i < bursts; i++){
+    const start = now + i * (dur + gap);
+    const frames = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, frames, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let j = 0; j < frames; j++){
+      const env = Math.exp(-j / (frames * 0.5));
+      data[j] = (Math.random() * 2 - 1) * env;
+    }
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(filter);
+    src.start(start);
+  }
+}  function shocked(){ const c=ctx(); const o=c.createOscillator(), g=c.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(900,c.currentTime); o.frequency.exponentialRampToValueAtTime(220,c.currentTime+0.35); g.gain.setValueAtTime(0.12,c.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.35); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+0.38); }
   function confettiBurst(){ confettiHost.innerHTML=''; for(let i=0;i<28;i++){ const s=document.createElement('span'); s.textContent=['🎉','✨','🎈','⭐','🎊'][Math.floor(Math.random()*5)]; s.style.left=(Math.random()*100)+'%'; s.style.top='-2rem'; s.style.animationDuration=(2+Math.random()*1.5)+'s'; s.style.animationDelay=(Math.random()*0.5)+'s'; confettiHost.appendChild(s);} }
 
   // ===== App logic =====
@@ -362,8 +396,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function newSet(){ summary.style.display='none'; setup.style.display='block'; }
 
   // Events
-  startBtn?.addEventListener('click', start);
-  answerForm?.addEventListener('submit', e=>{ e.preventDefault(); submit(); });
+  startBtn?.addEventListener('click', ()=>{ ensureAudio(); start(); });
+answerForm?.addEventListener('submit', e=>{ e.preventDefault(); ensureAudio(); submit(); });
   nextBtn?.addEventListener('click', advance);
   // Quality-of-life: Enter key advances when modal open; clicking the overlay advances too
   document.addEventListener('keydown', e => {
