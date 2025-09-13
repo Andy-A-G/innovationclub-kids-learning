@@ -1,38 +1,106 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Innovation Club Apps</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Innovation Club Kids Learning</title>
+  <meta name="description" content="Fun, free learning apps for primary school kids: Spell Buddy and Times Buddy." />
   <style>
-    :root { --blue:#0b74d1; --dark:#222; --light:#f7f7f7; }
-    html,body{margin:0;padding:0;background:var(--light);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
-    .wrap{max-width:900px;margin:40px auto;padding:24px;}
-    h1{margin:0 0 8px;color:var(--dark);font-size:2rem}
-    p{color:#444;margin:0 0 24px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:12px}
-    .card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e6e6e6;box-shadow:0 2px 10px rgba(0,0,0,.06)}
-    .card h2{margin:0 0 8px;font-size:1.25rem}
-    .card p{margin:0 0 16px;color:#555}
-    .btn{display:inline-block;text-decoration:none;background:var(--blue);color:#fff;padding:12px 16px;border-radius:10px;font-weight:600}
-    .btn:focus,.btn:hover{filter:brightness(.95)}
-    footer{margin-top:28px;color:#666;font-size:.9rem}
+    :root{
+      --bg1:#F2FBFF;         /* soft sky */
+      --bg2:#FFF7E8;         /* warm glow */
+      --ink:#1f2937;         /* dark text */
+      --sub:#475569;         /* secondary text */
+      --brand:#0b74d1;       /* Innovation Club blue */
+      --accent:#ff7a59;      /* friendly orange */
+      --card:#ffffff;
+      --ring:#dbeafe;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--ink);
+      background: radial-gradient(1200px 500px at 10% -10%, var(--bg1), transparent),
+                  radial-gradient(1200px 500px at 110% -10%, var(--bg2), transparent),
+                  #ffffff;
+      min-height:100svh;
+      display:flex; align-items:center; justify-content:center;
+      padding:24px;
+    }
+    .wrap{width:100%; max-width:960px}
+    header{
+      text-align:center; margin:0 auto 18px; padding:8px 12px;
+    }
+    .logo{
+      width:72px; height:72px; border-radius:16px;
+      display:block; margin:0 auto 10px; object-fit:contain; background:#fff;
+      box-shadow:0 6px 20px rgba(0,0,0,.08); border:1px solid #eef2f7;
+    }
+    h1{margin:6px 0 4px; font-size:clamp(1.6rem, 2.5vw + 1rem, 2.4rem);}
+    .tag{margin:0; color:var(--sub)}
+    .grid{
+      display:grid; gap:18px; margin-top:22px;
+      grid-template-columns:repeat(auto-fit, minmax(260px,1fr));
+    }
+    .card{
+      background:var(--card);
+      border:1px solid #e9eef5;
+      border-radius:18px;
+      padding:20px;
+      box-shadow:0 8px 24px rgba(15,23,42,.06);
+      transition:transform .12s ease, box-shadow .12s ease;
+    }
+    .card:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(15,23,42,.10); }
+    .card h2{ margin:0 0 6px; font-size:1.25rem;}
+    .card p{ margin:0 0 14px; color:var(--sub); }
+    .btn{
+      display:inline-block; text-decoration:none; font-weight:700;
+      padding:12px 16px; border-radius:12px;
+      background:var(--brand); color:#fff;
+      box-shadow:0 6px 14px rgba(11,116,209,.25);
+      outline:0; border:2px solid transparent;
+    }
+    .btn:hover{ filter:brightness(.97) }
+    .btn:focus{ border-color:var(--ring) }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      background:#eef6ff; color:#0b5fb0; border:1px solid #dbeafe;
+      padding:8px 12px; border-radius:999px; font-weight:600; font-size:.95rem;
+      margin:10px auto 0;
+    }
+    footer{
+      margin-top:22px; text-align:center; color:var(--sub); font-size:.95rem;
+    }
+    /* fun emoji badges on cards */
+    .badge{font-size:1.15rem; margin-left:6px}
   </style>
 </head>
 <body>
-  <main class="wrap">
-    <h1>Innovation Club – Learning Apps</h1>
-    <p>Select an app to begin:</p>
+  <div class="wrap">
+    <header>
+      <!-- Optional logo: upload logo.png to the repo root -->
+      <img src="logo.png" alt="" class="logo" onerror="this.style.display='none'">
+      <h1>Innovation Club <span style="color:var(--brand)">Kids Learning</span></h1>
+      <p class="tag">Pick an app and start having fun 🎉</p>
+      <div class="pill" aria-hidden="true">No install • Works offline once loaded</div>
+    </header>
 
-    <section class="grid">
-      <div class="card">
-        <h2>Spell Buddy</h2>
-        <p>Type the spelling you hear. Fun sounds, confetti, and a score at the end.</p>
-        <a class="btn" href="Spellbuddy.html">Open Spell Buddy</a>
-      </div>
+    <section class="grid" aria-label="Available apps">
+      <article class="card">
+        <h2>Spell Buddy <span class="badge">📝✨</span></h2>
+        <p>Hear the word, type the spelling, celebrate with confetti and a joke.</p>
+        <a class="btn" href="Spellbuddy.html" aria-label="Open Spell Buddy app">Open Spell Buddy</a>
+      </article>
 
-      <div class="card">
-        <h2>Times Buddy</h2>
-        <p>Practise times tables with hints, retries, and a friendly summary.</p>
-        <a class="btn" href="Timestablebuddy.html">Open Times Buddy</a>
-      </div>
+      <article class="card">
+        <h2>Times Buddy <span class="badge">✖️💡</span></h2>
+        <p>Practise times tables with hints, retries and a friendly score summary.</p>
+        <a class="btn" href="Timestablebuddy.html" aria-label="Open Times Buddy app">Open Times Buddy</a>
+      </article>
+    </section>
+
+    <footer>Made with ❤️ by Innovation Club. Safe, simple and free for families and schools.</footer>
+  </div>
+</body>
+</html>
