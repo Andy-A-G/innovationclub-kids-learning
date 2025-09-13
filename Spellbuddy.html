@@ -238,8 +238,23 @@ function hasGoogleUKVoice(){
 }
 function checkVoiceQuality(){
   if(!browserNotice) return;
-  const shouldWarn = !looksLikeChrome() || !hasGoogleUKVoice();
-  if(shouldWarn){ browserNotice.style.display='grid'; }
+  // Only warn if truly not Chrome
+  if(!looksLikeChrome()){
+    browserNotice.style.display = 'grid';
+  } else {
+    // Wait until voices are loaded in Chrome
+    let tries = 0;
+    const check = setInterval(() => {
+      const hasVoice = hasGoogleUKVoice();
+      if (hasVoice || tries > 10) { // stop after ~3s
+        clearInterval(check);
+        if (!hasVoice) {
+          browserNotice.style.display = 'grid';
+        }
+      }
+      tries++;
+    }, 300);
+  }
 }
 continueBtn?.addEventListener('click', ()=>{ browserNotice.style.display='none'; });
 speechSynthesis.onvoiceschanged = () => { checkVoiceQuality(); };
