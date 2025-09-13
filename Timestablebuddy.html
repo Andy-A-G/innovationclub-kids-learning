@@ -225,6 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
   speechSynthesis.onvoiceschanged = () => { checkVoiceQuality(); };
   // fallback for Safari where voiceschanged may not fire
   setTimeout(checkVoiceQuality, 600);
+  // run immediately too (covers Safari cases that miss the timeout)
+  checkVoiceQuality();
   // /ADDED
 
   // --- Sounds (applause + shocked) ---
