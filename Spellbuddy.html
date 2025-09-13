@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SpellBuddy UK — Weekly Spellings (Offline)</title>
+<style>
+  :root{--ink:#0f172a;--muted:#475569;--primary:#4f46e5;--emerald:#059669;--rose:#e11d48;--bg1:#eff6ff;--bg2:#f5f3ff;--bg3:#fff1f2}
+  *{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;color:var(--ink);background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));}
+  .container{max-width:880px;margin:0 auto;padding:24px}
+  h1{font-weight:900;letter-spacing:-.02em} h2{margin:.2rem 0 1rem}
+  .card{background:rgba(255,255,255,.85);backdrop-filter:saturate(1.2) blur(6px);border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 30px rgba(2,8,23,.08);padding:24px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  input[type=text],textarea{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:12px;outline:none}
+  textarea{min-height:180px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  button{border:0;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+  .btn{background:var(--primary);color:white} .btn:hover{filter:brightness(1.05)}
+  .btn-ghost{background:white;border:1px solid #cbd5e1}
+  .btn-good{background:var(--emerald);color:white}
+  .pill{display:inline-block;border-radius:999px;background:#e2e8f0;padding:4px 10px;font-size:.8rem}
+  .feedback{border-radius:14px;padding:12px;border:1px solid}
+  .ok{background:#ecfdf5;border-color:#a7f3d0}
+  .no{background:#fff1f2;border-color:#fecdd3}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-top:1px solid #e5e7eb;text-align:left}
+  th{background:#f8fafc}
+  footer{opacity:.6;text-align:center;padding:20px}
+  .confetti{position:fixed;inset:0;pointer-events:none}
+  .confetti span{position:absolute;font-size:22px;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:.9}}
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;place-items:center;z-index:50}
+  .modal-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 10px 35px rgba(0,0,0,.12);padding:20px;max-width:420px;width:90%;text-align:center}
+  .modal-card h3{margin:.2rem 0 .6rem;font-size:1.2rem}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 6px 20px rgba(2,8,23,.2);font-weight:700;display:none;z-index:60}
+</style>
+</head>
+<body>
+  <div class="container">
+    <header class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h1 style="font-size:clamp(28px,5vw,38px)">SpellBuddy <span style="color:var(--primary)">UK</span></h1>
+      <div class="pill">Offline — no accounts, no keys</div>
+    </header>
+
+    <main id="app">
+      <!-- SETUP -->
+      <section id="setup" class="card">
+        <h2>Set up this week’s test</h2>
+        <div class="row">
+          <div style="flex:1 1 220px">
+            <label>Week label (optional)
+              <input id="week" type="text" placeholder="Week of 08/08/2025" />
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Enter words (one per line or comma‑separated)
+            <textarea id="words" placeholder="example
+bridge
+science
+because
+friend
+beautiful
+minute
+people
+again
+whole"></textarea>
+          </label>
+          <div style="margin-top:6px;font-size:.9rem;opacity:.7">Currently <span id="count">0</span> words</div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button id="start" class="btn">Start test</button>
+          <button id="saveWeek" class="btn-ghost">Save week</button>
+        </div>
+        <p style="opacity:.7;font-size:.9rem;margin-top:8px">Everything is stored locally in your browser.</p>
+      </section>
+
+      <!-- QUIZ -->
+      <section id="quiz" class="card" style="display:none">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px">
+          <div class="pill" id="weekLabel"></div>
+          <div class="pill"><span id="progress">0/0</span></div>
+        </div>
+        <h2>Spell this word</h2>
+        <div class="row" style="margin-bottom:10px">
+          <button id="sayWord" class="btn">🔊 Say word</button>
+          <button id="sayLetters" class="btn-ghost">🔡 Say letters</button>
+        </div>
+        <form id="answerForm" class="row" onsubmit="return false">
+          <input id="answer" type="text" placeholder="Type the spelling here…" style="flex:1 1 260px;font-size:1.1rem" autocomplete="off" />
+          <button id="submit" class="btn-good" type="submit">Submit</button>
+          <button id="hint" class="btn-ghost" type="button">Hint</button>
+          <button id="context" class="btn-ghost" type="button">Context</button>
+          <button id="clear" class="btn-ghost" type="button">Clear</button>
+        </form>
+        <div id="feedback" style="margin-top:12px"></div>
+        <div class="row" style="margin-top:12px;justify-content:space-between">
+          <button id="backSetup" class="btn-ghost">← Back to setup</button>
+          <button id="skip" class="btn-ghost">Skip →</button>
+        </div>
+      </section>
+
+      <!-- SUMMARY -->
+      <section id="summary" class="card" style="display:none">
+        <h2>Summary</h2>
+        <div class="pill" id="sumWeek"></div>
+        <div style="margin:12px 0" class="row">
+          <div class="pill" id="score">Score: 0/10</div>
+          <button id="retry" class="btn-ghost">Try again</button>
+          <button id="newWeek" class="btn-ghost">New week</button>
+        </div>
+        <div style="border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Word</th><th>Attempts</th><th>Correct?</th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- INSTRUCTIONS (parents) -->
+      <section class="card" id="instructions">
+        <h2>How to use (for parents)</h2>
+        <ol style="margin:0 0 8px 18px">
+          <li>Open this file in <b>Google Chrome</b> on a laptop/desktop (best speech support).</li>
+          <li>Type this week’s words (one per line) and optionally a week label.</li>
+          <li>Click <b>Start test</b>. Words will be read in <b>random order</b>.</li>
+          <li>Type the spelling and hit <b>Submit</b>. Correct answers cheer and tell a joke; wrong answers give a gentle “try again.”</li>
+          <li><b>Hint</b> spells letters. <b>Context</b> speaks the word in a sentence (tries online examples if available).</li>
+          <li>Use <b>Save week</b> to store words locally for next time.</li>
+        </ol>
+        <small style="font-family:ui-monospace,Menlo,Consolas,monospace;opacity:.75">Privacy: nothing leaves your computer. Optional context lookup and jokes only call the free APIs when you click the buttons.</small>
+      </section>
+    </main>
+
+    <div id="confetti" class="confetti"></div>
+
+    <!-- Next Word Modal -->
+    <div id="nextModal" class="modal-overlay">
+      <div class="modal-card">
+        <h3>Ready for the next word?</h3>
+        <p style="opacity:.75;margin-bottom:12px">Tap the button when the joke has finished.</p>
+        <button id="nextBtn" class="btn">Next word ▶︎</button>
+      </div>
+    </div>
+
+    <footer>Works best in Chrome with speech enabled.</footer>
+  </div>
+  <div id="toast" class="toast">Saved</div>
+
+<script>
+// ===== Local storage keys
+const LS_WORDS='sb.words', LS_WEEK='sb.week';
+
+// ===== DOM
+const $=s=>document.querySelector(s);
+const weekEl=$('#week'), wordsEl=$('#words'), countEl=$('#count');
+const startBtn=$('#start'), saveBtn=$('#saveWeek');
+const setup=$('#setup'), quiz=$('#quiz'), summary=$('#summary');
+const weekLabelEl=$('#weekLabel'), progressEl=$('#progress');
+const sayWordBtn=$('#sayWord'), sayLettersBtn=$('#sayLetters');
+const answerForm=$('#answerForm'), answerEl=$('#answer');
+const hintBtn=$('#hint'), clearBtn=$('#clear'), feedbackEl=$('#feedback');
+const backSetupBtn=$('#backSetup'), skipBtn=$('#skip');
+const sumWeekEl=$('#sumWeek'), scoreEl=$('#score'), rowsEl=$('#rows');
+const retryBtn=$('#retry'), newWeekBtn=$('#newWeek');
+const nextModal=$('#nextModal'), nextBtn=$('#nextBtn');
+const contextBtn=$('#context');
+const toastEl=$('#toast');
+
+// ===== State
+let words=[], order=[], idx=0, records=[];
+
+// ===== Utils
+function suggestedWeek(){const d=new Date();return 'Week of '+d.toLocaleDateString();}
+function cleanList(raw){return raw.split(/\n|,|;/).map(w=>w.trim()).filter(Boolean)}
+function randomChoice(a){return a[Math.floor(Math.random()*a.length)]}
+function flash(msg){ if(!toastEl) return; toastEl.textContent=msg; toastEl.style.display='block'; clearTimeout(flash._h); flash._h=setTimeout(()=>toastEl.style.display='none',1400); }
+
+// ===== Speech (default Google UK English Female)
+function preferredVoice(){
+  const vs=window.speechSynthesis.getVoices();
+  return vs.find(v=>/Google UK English Female/i.test(v.name))
+      || vs.find(v=>/en-GB/i.test(v.lang) && /female/i.test(v.name||''))
+      || vs.find(v=>/en-GB/i.test(v.lang))
+      || vs[0];
+}
+function speakQueue(items){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  let i=0;
+  const next=()=>{
+    if(i>=items.length) return;
+    const it=items[i++];
+    const u=new SpeechSynthesisUtterance(it.text);
+    const v=preferredVoice();
+    if(v) u.voice=v;
+    u.lang=(v&&v.lang)||'en-GB';
+    u.rate=it.rate||1; u.pitch=it.pitch||1; u.volume=1;
+    u.onend=()=>setTimeout(next,60);
+    window.speechSynthesis.speak(u);
+  };
+  next();
+}
+
+// ===== Sounds
+const APPLAUSE_FILE='applause.mp3';
+let applauseAudio=null, applauseReady=false;
+try{
+  applauseAudio=new Audio(APPLAUSE_FILE);
+  applauseAudio.preload='auto';
+  applauseAudio.addEventListener('canplaythrough',()=>{applauseReady=applauseAudio.duration>0;},{once:true});
+  applauseAudio.addEventListener('error',()=>{applauseReady=false;});
+}catch{}
+let audioCtx=null; const ctx=()=>audioCtx||(audioCtx=new (window.AudioContext||window.webkitAudioContext)());
+function applause(){ if(applauseReady&&applauseAudio){ try{applauseAudio.currentTime=0; applauseAudio.volume=0.9; applauseAudio.play().catch(applauseFallback);}catch{applauseFallback();} } else applauseFallback(); }
+function applauseFallback(){ const c=ctx(); const filter=c.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=2400; const master=c.createGain(); master.gain.value=0.18; filter.connect(master).connect(c.destination); const bursts=6, dur=0.12, gap=0.12, now=c.currentTime; for(let i=0;i<bursts;i++){ const start=now+i*(dur+gap); const frames=Math.floor(c.sampleRate*dur); const buf=c.createBuffer(1,frames,c.sampleRate); const data=buf.getChannelData(0); for(let j=0;j<frames;j++){ const env=Math.exp(-j/(frames*0.5)); data[j]=(Math.random()*2-1)*env; } const src=c.createBufferSource(); src.buffer=buf; src.connect(filter); src.start(start);} }
+function shocked(){ const c=ctx(); const o=c.createOscillator(), g=c.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(900,c.currentTime); o.frequency.exponentialRampToValueAtTime(220,c.currentTime+0.35); g.gain.setValueAtTime(0.12,c.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.35); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+0.38); }
+
+// ===== Confetti
+function confettiBurst(){ const host=document.querySelector('#confetti'); host.innerHTML=''; for(let i=0;i<28;i++){ const s=document.createElement('span'); s.textContent=['🎉','✨','🎈','⭐','🎊'][Math.floor(Math.random()*5)]; s.style.left=(Math.random()*100)+'%'; s.style.top='-2rem'; s.style.animationDuration=(2+Math.random()*1.5)+'s'; s.style.animationDelay=(Math.random()*0.5)+'s'; host.appendChild(s);} }
+
+// ===== Jokes (kid‑safe: icanhazdadjoke -> JokeAPI strict -> offline)
+async function randomJoke(){
+  try{ // primary: SFW one‑liners
+    const res=await fetch('https://icanhazdadjoke.com/',{headers:{'Accept':'application/json'}});
+    if(res.ok){ const data=await res.json(); if(data && data.joke){ return {q:data.joke, a:''}; } }
+  }catch{}
+  try{ // secondary: puns/misc with hard blacklist
+    const res2=await fetch('https://v2.jokeapi.dev/joke/Misc,Pun?type=twopart&blacklistFlags=nsfw,religious,political,racist,sexist,explicit');
+    if(res2.ok){ const data2=await res2.json(); if(data2 && data2.setup && data2.delivery){ return {q:data2.setup, a:data2.delivery}; } if(data2 && data2.joke){ return {q:data2.joke, a:''}; } }
+  }catch{}
+  return {q:'Why did the student eat his homework?', a:'Because the teacher said it was a piece of cake!'};
+}
+
+// ===== Context sentences (offline + optional online)
+const CONTEXTS={ 'wear':["Please wear your coat because it's cold."],'where':["Where did you put your book?"],'their':["Their dog loves to play."],'there':["There is a rainbow in the sky."],"they're":["They're going to the park."],'to':["I am going to the shop."],'too':["I would like some cake too."],'two':["I have two pencils."],'here':["Here is your homework."],'hear':["Can you hear the music?"],'your':["Remember to bring your lunch."],'you\'re':["You're doing a great job."],'its':["The cat chased its tail."],"it's":["It's raining outside."],'passed':["We passed the shop on the way home."],'past':["Dinosaurs lived in the distant past."],'accept':["Please accept this gift."],'except':["Everyone went outside except me."]};
+function contextSentenceFor(word){ const w=(word||'').toLowerCase(); const list=CONTEXTS[w]; if(list&&list.length) return list[Math.floor(Math.random()*list.length)]; return 'Here is a sentence using '+word+': I can spell '+word+'.'; }
+async function __fetchContextOnline(word){ try{ const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),1200); const res=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(word),{signal:ctrl.signal}); clearTimeout(to); if(!res.ok) return null; const data=await res.json(); for(const entry of (data||[])){ const meanings=entry.meanings||[]; for(const m of meanings){ const defs=m.definitions||[]; for(const d of defs){ if(d.example&&typeof d.example==='string'){ const ex=d.example.trim(); if(ex.toLowerCase().includes(String(word).toLowerCase())){ return ex.charAt(0).toUpperCase()+ex.slice(1); } } } } } const def=data?.[0]?.meanings?.[0]?.definitions?.[0]?.definition; if(def){ return '“'+word+'” means: '+def; } return null; }catch{ return null; } }
+async function sentenceFor(word){ const online=await __fetchContextOnline(word); return online||contextSentenceFor(word); }
+
+// ===== App flows
+function saveSession(){ try{ localStorage.setItem(LS_WEEK, weekEl.value||''); localStorage.setItem(LS_WORDS, JSON.stringify(cleanList(wordsEl.value))); flash('Saved ✓'); }catch(e){ console.warn('Save failed',e); flash('Couldn\'t save'); } }
+function loadSession(){ try{ weekEl.value=localStorage.getItem(LS_WEEK)||''; const arr=JSON.parse(localStorage.getItem(LS_WORDS)||'[]'); if(Array.isArray(arr)&&arr.length){ wordsEl.value=arr.join('\n'); } }catch(e){ console.warn('Load failed',e); } updateCount(); if(!weekEl.value) weekEl.placeholder=suggestedWeek(); }
+function updateCount(){ countEl.textContent=cleanList(wordsEl.value).length; }
+function startQuiz(){ words=cleanList(wordsEl.value); if(words.length<1){ alert('Please enter at least one word.'); return; } saveSession(); records=words.map(w=>({word:w,attempts:0,correct:false})); order=[...Array(words.length).keys()].sort(()=>Math.random()-0.5); idx=0; setup.style.display='none'; summary.style.display='none'; quiz.style.display='block'; weekLabelEl.textContent=weekEl.value||suggestedWeek(); answerEl.value=''; feedbackEl.innerHTML=''; progress(); setTimeout(sayCurrent,250); }
+function sayCurrent(){ const w=words[order[idx]]; speakQueue([{text:w,rate:1}]); }
+function sayLetters(){ const w=words[order[idx]]; const letters=w.split('').join(' '); speakQueue([{text:letters,rate:0.95}]); }
+async function speakContext(){ const w=words[order[idx]]; const s=await sentenceFor(w); speakQueue([{text:s,rate:0.98}]); }
+function progress(){ progressEl.textContent=(idx+1)+'/'+order.length; }
+async function submitAnswer(){ const w=words[order[idx]]; const ok=(answerEl.value||'').trim().toLowerCase()===w.toLowerCase(); const r=records[order[idx]]; r.attempts++; if(ok){ r.correct=true; await goodFeedback(); applause(); confettiBurst(); showNextModal(); } else { badFeedback(); shocked(); answerEl.focus(); } }
+async function goodFeedback(){ const j=await randomJoke(); feedbackEl.innerHTML='<div class="feedback ok"><div style="font-weight:700">🎉 Correct!</div><div style="margin-top:6px">'+(j.q||'Great job!')+'</div><div style="font-style:italic;opacity:.8">'+(j.a||'')+'</div></div>'; const lines=[{text:'Well done! That was brilliant.',rate:1}]; if(j.q){ lines.push({text:j.q+(j.a?(' '+j.a):''),rate:1}); } speakQueue(lines); }
+function badFeedback(){ const t=randomChoice(['Oooh, close! Give it another whirl.','Nearly! Your keyboard sneezed, try again.','So close I can smell victory. One more go!','Almost! Your letters are doing the hokey‑cokey.','Missed by a whisker. You’ve got this.','Your fingers did a little tango—try once more!']); feedbackEl.innerHTML='<div class="feedback no"><div style="font-weight:700">😲 Not quite…</div><div style="margin-top:6px">'+t+'</div><div style="opacity:.75">Try again, or tap Hint.</div></div>'; speakQueue([{text:randomChoice(['Almost! Try again.','Close! Give it another go.']),rate:1}]); }
+function giveHint(){ const w=words[order[idx]]; feedbackEl.innerHTML='<div class="feedback no">Hint: it starts with “<b>'+w[0]+'</b>…”</div>'; }
+function nextWord(){ hideNextModal(); feedbackEl.innerHTML=''; answerEl.value=''; if(idx+1>=order.length){ showSummary(); return; } idx++; progress(); setTimeout(sayCurrent,250); }
+function showSummary(){ quiz.style.display='none'; summary.style.display='block'; sumWeekEl.textContent=weekEl.value||suggestedWeek(); const correct=records.filter(r=>r.correct).length; scoreEl.textContent='Score: '+correct+'/'+records.length; rowsEl.innerHTML=records.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><b>'+r.word+'</b></td><td>'+r.attempts+'</td><td>'+(r.correct?'✅':'❌')+'</td></tr>').join(''); speakQueue([{text:'Great work. Here is your summary.',rate:1}]); }
+function backToSetup(){ quiz.style.display='none'; summary.style.display='none'; setup.style.display='block'; }
+
+// ===== Events
+wordsEl.addEventListener('input', updateCount);
+startBtn.addEventListener('click', startQuiz);
+saveBtn.addEventListener('click', saveSession);
+backSetupBtn.addEventListener('click', ()=>{ hideNextModal(); backToSetup(); });
+skipBtn.addEventListener('click', ()=>{ hideNextModal(); nextWord(); });
+answerForm.addEventListener('submit', (e)=>{e.preventDefault(); submitAnswer();});
+hintBtn.addEventListener('click', giveHint);
+clearBtn.addEventListener('click', ()=>{answerEl.value=''; answerEl.focus();});
+sayWordBtn.addEventListener('click', sayCurrent);
+sayLettersBtn.addEventListener('click', sayLetters);
+contextBtn.addEventListener('click', speakContext);
+retryBtn.addEventListener('click', ()=>{
+  hideNextModal();
+  idx=0;
+  records=words.map(w=>({word:w,attempts:0,correct:false}));
+  order=[...Array(words.length).keys()].sort(()=>Math.random()-0.5);
+  summary.style.display='none';
+  quiz.style.display='block';
+  progress();
+  setTimeout(sayCurrent,250);
+});
+newWeekBtn.addEventListener('click', ()=>{ hideNextModal(); backToSetup(); });
+
+function showNextModal(){ nextModal.style.display='grid'; setTimeout(()=>nextBtn.focus(),50); }
+function hideNextModal(){ nextModal.style.display='none'; }
+
+// ===== Boot
+window.addEventListener('load', ()=>{ loadSession(); speechSynthesis.getVoices(); nextBtn.addEventListener('click', nextWord); });
+</script>
+</body>
+</html>
