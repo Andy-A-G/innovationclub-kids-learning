@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Story Forge</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>AI Story Forge</h1>
+    <p class="tag">Make a kid-friendly story in seconds.</p>
+
+    <section class="card">
+      <h2>Create a story</h2>
+      <div class="form-grid">
+        <input id="hero" placeholder="Hero" />
+        <input id="sidekick" placeholder="Sidekick" />
+        <input id="setting" placeholder="Setting" />
+        <input id="goal" placeholder="Goal" />
+        <select id="length">
+          <option value="short">Short (~150–200 words)</option>
+          <option value="medium">Medium (~300 words)</option>
+        </select>
+        <button id="forge" class="btn">Forge Story</button>
+      </div>
+
+      <label for="out">Story Output</label>
+      <textarea id="out" readonly>Your story will appear here…</textarea>
+
+      <div class="actions">
+        <button id="copy" class="btn-ghost">Copy Story</button>
+        <button id="save" class="btn-good">Download .txt</button>
+      </div>
+    </section>
+
+    <p class="feedback">
+      Got ideas? <a href="https://discord.gg/ZtwxyqAnvv" target="_blank" rel="noopener">Share feedback on our Discord</a>.
+    </p>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
