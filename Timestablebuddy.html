@@ -86,10 +86,10 @@
         <h2>Instructions for Parents</h2>
         <ol>
           <li>Select one or more multiplication tables (×1–×12). By default, none are ticked.</li>
-          <li>Click <b>Start</b> to begin a 10‑question test. Questions are random and non‑repeating from the tables you picked.</li>
+          <li>Click <b>Start</b> to begin a 10-question test. Questions are random and non-repeating from the tables you picked.</li>
           <li>The app reads each question aloud. Your child types the answer and presses <b>Submit</b>.</li>
-          <li>There’s a <b>6‑second</b> visual countdown bar for each question (purely visual — no penalty if it runs out).</li>
-          <li><b>Correct</b> → applause, confetti, and a kid‑friendly joke (spoken only). Tap <b>Next ▶︎</b> to continue.</li>
+          <li>There’s a <b>6-second</b> visual countdown bar for each question (purely visual — no penalty if it runs out).</li>
+          <li><b>Correct</b> → applause, confetti, and a kid-friendly joke (spoken only). Tap <b>Next ▶︎</b> to continue.</li>
           <li><b>Wrong</b> → a gentle nudge; they can try again. <b>Hint</b> gives a clue; <b>🔊 Say</b> repeats the question; <b>Skip →</b> moves on.</li>
           <li>At the end, the <b>Summary</b> shows score, tries, and whether each was answered <b>⏱️ In time</b>, <b>⌛ Overtime</b>, or <b>⏭️ Skipped</b>.</li>
           <li><b>Try again</b> reshuffles the same set size; <b>New set</b> returns to table selection.</li>
@@ -109,6 +109,21 @@
         <button id="nextBtn" class="btn">Next ▶︎</button>
       </div>
     </div>
+
+    <!-- ADDED: Browser notice modal -->
+    <div id="browserNotice" class="modal-overlay" style="display:none">
+      <div class="modal-card">
+        <h3>Better voices are available in Chrome</h3>
+        <p style="opacity:.8;margin:8px 0 14px">
+          For the clearest, most natural voice (Google UK English Female), please open this app in <b>Google Chrome</b>. Other browsers may sound robotic.
+        </p>
+        <div class="row" style="justify-content:center;gap:10px">
+          <a href="https://www.google.com/chrome/" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none;display:inline-block">Get Chrome</a>
+          <button id="continueBtn" class="btn">Continue anyway</button>
+        </div>
+      </div>
+    </div>
+    <!-- /ADDED -->
 
     <footer>Works best in Chrome with speech enabled.</footer>
   </div>
@@ -131,6 +146,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelBtn=$('#cancel');
   const timerFill=document.getElementById('timerFill');
   const confettiHost=document.getElementById('confetti');
+
+  // ADDED: references to popup elements
+  const browserNotice = document.querySelector('#browserNotice');
+  const continueBtn = document.querySelector('#continueBtn');
+  // /ADDED
 
   let pool=[], order=[], idx=0, records=[];
   const TEST_LEN=10;
@@ -182,6 +202,30 @@ document.addEventListener('DOMContentLoaded', () => {
     let i=0; const next=()=>{ if(i>=items.length) return; const it=items[i++]; const u=new SpeechSynthesisUtterance(it.text); const v=preferredVoice(); if(v) u.voice=v; u.lang=v?.lang||'en-GB'; u.rate=it.rate||1; u.pitch=it.pitch||1; u.onend=()=>setTimeout(next,60); speechSynthesis.speak(u); }; next();
   }
   speechSynthesis.onvoiceschanged=()=>{}; // warm voices on Chrome
+
+  // ADDED: popup logic (Chrome/voice check)
+  function looksLikeChrome(){
+    const ua = navigator.userAgent;
+    const isChrome = /Chrome\//.test(ua);
+    const isEdge = /Edg\//.test(ua);
+    const isOpera = /OPR\//.test(ua);
+    return isChrome && !isEdge && !isOpera;
+  }
+  function hasGoogleUKVoice(){
+    try{ return speechSynthesis.getVoices().some(v=>/Google UK English Female/i.test(v.name)); }
+    catch{ return false; }
+  }
+  function checkVoiceQuality(){
+    if(!browserNotice) return;
+    const shouldWarn = !looksLikeChrome() || !hasGoogleUKVoice();
+    if(shouldWarn){ browserNotice.style.display='grid'; }
+  }
+  continueBtn?.addEventListener('click', ()=>{ browserNotice.style.display='none'; });
+  // ensure our check runs after voices load
+  speechSynthesis.onvoiceschanged = () => { checkVoiceQuality(); };
+  // fallback for Safari where voiceschanged may not fire
+  setTimeout(checkVoiceQuality, 600);
+  // /ADDED
 
   // --- Sounds (applause + shocked) ---
   let audioCtx=null; const ctx=()=>audioCtx||(audioCtx=new (window.AudioContext||window.webkitAudioContext)());
