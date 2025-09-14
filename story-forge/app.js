@@ -1,4 +1,4 @@
-const API_BASE = "https://story-forge-ai-sage.vercel.app";
+const API_BASE = "https://story-forge-api.vercel.app";
 
 const el = id => document.getElementById(id);
 const out = el('out');          // should be a <textarea id="out">
