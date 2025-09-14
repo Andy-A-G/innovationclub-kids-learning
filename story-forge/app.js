@@ -70,6 +70,15 @@ function speakStory(text){
   };
   next();
 }
+// 👇 Add this helper function here
+function stripMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')   // bold **foo**
+    .replace(/\*(.*?)\*/g, '$1')       // italics *foo*
+    .replace(/#+\s/g, '')              // headings
+    .replace(/[`>~_$begin:math:display$$end:math:display$]/g, '')        // misc symbols
+    .replace(/\n{2,}/g, '\n');         // clean extra line breaks
+}
 
 // Buttons
 const speakBtn = el('speak');
