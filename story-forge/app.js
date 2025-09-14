@@ -7,25 +7,45 @@ const btn = el('forge');
 btn.addEventListener('click', async () => {
   btn.disabled = true;
   out.value = "Forging…";
+
+  const body = {
+    hero: el('hero').value.trim(),
+    sidekick: el('sidekick').value.trim(),
+    setting: el('setting').value.trim(),
+    goal: el('goal').value.trim(),
+    length: el('length').value
+  };
+
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 12000); // 12s timeout
+
   try {
-    const body = {
-      hero: el('hero').value.trim(),
-      sidekick: el('sidekick').value.trim(),
-      setting: el('setting').value.trim(),
-      goal: el('goal').value.trim(),
-      length: el('length').value
-    };
     const res = await fetch(`${API_BASE}/api/story`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: ctrl.signal
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+
+    const text = await res.text(); // read body even if not OK
+
+    if (!res.ok) {
+      // Surface server message (first 400 chars) to the textarea
+      out.value = `Error forging story (HTTP ${res.status}).\n\n` +
+                  (text ? text.slice(0, 400) : '(no response body)');
+      console.error('Forge error:', res.status, text);
+      return;
+    }
+
+    const data = (() => { try { return JSON.parse(text); } catch { return {}; } })();
     out.value = data.story || "No story returned — try again.";
   } catch (e) {
-    out.value = "Error forging story.";
-  } finally { btn.disabled = false; }
+    out.value = `Error forging story.\n\n${e?.message || e}`;
+    console.error(e);
+  } finally {
+    clearTimeout(to);
+    btn.disabled = false;
+  }
 });
 
 el('copy').addEventListener('click', async () => {
