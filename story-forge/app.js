@@ -17,7 +17,7 @@ btn.addEventListener('click', async () => {
   };
 
   const ctrl = new AbortController();
-  const to = setTimeout(() => ctrl.abort(), 12000); // 12s timeout
+  const to = setTimeout(() => ctrl.abort(), 30000); // 30s timeout
 
   try {
     const res = await fetch(`${API_BASE}/api/story`, {
