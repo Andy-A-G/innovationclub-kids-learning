@@ -3,11 +3,19 @@ const API_BASE = "https://story-forge-api.vercel.app";
 const el = id => document.getElementById(id);
 const out = el('out');          // should be a <textarea id="out">
 const btn = el('forge');
+autoResize(out); // size to initial placeholder/text on load
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+out.addEventListener('input', () => autoResize(out));
 
 btn.addEventListener('click', async () => {
   btn.disabled = true;
   out.value = "Forging…";
-
+  autoResize(out);
+  
   const body = {
     hero: el('hero').value.trim(),
     sidekick: el('sidekick').value.trim(),
@@ -33,14 +41,17 @@ btn.addEventListener('click', async () => {
       // Surface server message (first 400 chars) to the textarea
       out.value = `Error forging story (HTTP ${res.status}).\n\n` +
                   (text ? text.slice(0, 400) : '(no response body)');
+      autoResize(out);
       console.error('Forge error:', res.status, text);
       return;
     }
 
     const data = (() => { try { return JSON.parse(text); } catch { return {}; } })();
     out.value = data.story || "No story returned — try again.";
+    autoResize(out);
   } catch (e) {
     out.value = `Error forging story.\n\n${e?.message || e}`;
+    autoResize(out);
     console.error(e);
   } finally {
     clearTimeout(to);
